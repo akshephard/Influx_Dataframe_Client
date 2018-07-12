@@ -33,12 +33,12 @@ def main():
 
     #df_result = test_client.query_data(query_string_test)
     #specific_query(self,database,field,measurement,tag,value):
-    fields_list = ['AP_count']
+    #fields_list = ['AP_count'
     tags_list = ['building_number']
     values_list = ['67']
     database = 'lbnl_wifi_occ'
     measurement = 'wifi_data_correct'
-    query_result = test_client.specific_query(database,measurement,fields=fields_list,tags=tags_list,values=values_list)
+    query_result = test_client.specific_query(database,measurement,tags=tags_list,values=values_list)
 
     print(query_result)
 

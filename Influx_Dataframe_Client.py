@@ -70,7 +70,7 @@ i.e.
 
 '''
 def transform_to_dict(s, tags):
-
+    #print(s)
     dic = {}
     for tag in tags:
         dic[tag] = s[tag]
@@ -101,26 +101,31 @@ class Influx_Dataframe_Client(object):
         self.password = Config.get("DB_config", "password")
         self.database = Config.get("DB_config", "database")
         self.protocol = Config.get("DB_config", "protocol")
-        self.measurement = Config.get("DB_config","measurement")
+        #self.measurement = Config.get("DB_config","measurement")
         self.port = Config.get("DB_config", "port")
-        self.tags = Config.get("wifi_metadata", "tags")
-        self.tags = self.tags.split(',')
-        self.fields = Config.get("wifi_metadata", "fields")
-        self.fields=self.fields.split(',')
+        self.use_ssl = Config.get("DB_config", "use_ssl")
+        self.verify_ssl = Config.get("DB_config", "verify_ssl")
+        print(self.use_ssl)
+        print(self.verify_ssl)
+        #self.tags = Config.get("wifi_metadata", "tags")
+        #self.tags = self.tags.split(',')
+        #self.fields = Config.get("wifi_metadata", "fields")
+        #self.fields=self.fields.split(',')
 
     # setup client both InfluxDBClient and DataFrameClient
     # DataFrameClient is for queries and InfluxDBClient is for writes
     def make_client(self):
-        '''
+
         self.client = InfluxDBClient(self.host, 8086, self.username, self.password, self.database,
-                                False, False)
+                                self.use_ssl, self.verify_ssl)
         self.df_client = DataFrameClient(self.host, 8086, self.username, self.password, self.database,
-                                False, False)
+                                self.use_ssl, self.verify_ssl)
         '''
         self.client = InfluxDBClient(self.host, 8086, self.username, self.password, self.database,
                                 True, True)
         self.df_client = DataFrameClient(self.host, 8086, self.username, self.password, self.database,
                                 True, True)
+        '''
 
     def expose_influx_client(self):
         #Expose InfluxDBClient to user so they utilize all functions of InfluxDBClient
@@ -132,10 +137,12 @@ class Influx_Dataframe_Client(object):
 
     def build_json(self,data, tags, fields, measurement):
 
+        #print(data.head())
         data['measurement'] = measurement
+        #print(data.head())
         data["tags"] = data.apply(transform_to_dict, tags=tags, axis=1)
         data["fields"] = data.apply(transform_to_dict, tags=fields, axis=1)
-
+        #print( data[["measurement","time", "tags", "fields"]].head())
         #build a list of dictionaries containing json data to give to client
         #only take relevant columns from dataframe
         json = data[["measurement","time", "tags", "fields"]].to_dict("records")
@@ -253,9 +260,7 @@ class Influx_Dataframe_Client(object):
 
         print(query_string)
         df = self.df_client.query(query_string, database=self.database,chunked=True, chunk_size=256)
-        #print(database)
-        #print(self.client.query("SHOW DATABASES"))
-        #print(df)
+
         if (measurement in df):
             return df[measurement]
         else:

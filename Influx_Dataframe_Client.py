@@ -111,17 +111,17 @@ class Influx_Dataframe_Client(object):
     # setup client both InfluxDBClient and DataFrameClient
     # DataFrameClient is for queries and InfluxDBClient is for writes
     def make_client(self):
+        '''
+        self.client = InfluxDBClient(self.host, 8086, self.username, self.password, self.database,
+                                False, False)
+        self.df_client = DataFrameClient(self.host, 8086, self.username, self.password, self.database,
+                                False, False)
+        '''
+        self.client = InfluxDBClient(self.host, 8086, self.username, self.password, self.database,
+                                True, True)
+        self.df_client = DataFrameClient(self.host, 8086, self.username, self.password, self.database,
+                                True, True)
 
-        self.client = InfluxDBClient(self.host, 8086, self.username, self.password, self.database,
-                                False, False)
-        self.df_client = DataFrameClient(self.host, 8086, self.username, self.password, self.database,
-                                False, False)
-        '''
-        self.client = InfluxDBClient(self.host, 8086, self.username, self.password, self.database,
-                                True, True)
-        self.df_client = DataFrameClient(self.host, 8086, self.username, self.password, self.database,
-                                True, True)
-        '''
     def expose_influx_client(self):
         #Expose InfluxDBClient to user so they utilize all functions of InfluxDBClient
         return self.client
@@ -191,7 +191,7 @@ class Influx_Dataframe_Client(object):
         '''
         tag_string = ""
         time_string = ""
-
+        df = {}
         #Create base query with fields and measurement
         query_string = "SELECT "
         if (fields == None):
@@ -251,10 +251,13 @@ class Influx_Dataframe_Client(object):
                     query_string = query_string + " AND "
                 query_string = query_string + tag_string
 
-        #print(query_string)
-        df = self.df_client.query(query_string, database='wifi_data8',chunked=True, chunk_size=256)
-        if (database in df):
-            return df[database]
+        print(query_string)
+        df = self.df_client.query(query_string, database=self.database,chunked=True, chunk_size=256)
+        #print(database)
+        #print(self.client.query("SHOW DATABASES"))
+        #print(df)
+        if (measurement in df):
+            return df[measurement]
         else:
             #Must have an empty result make empty dataframe
             df = pd.DataFrame()

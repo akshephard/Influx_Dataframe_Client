@@ -1,5 +1,6 @@
 import configparser
 import pandas as pd
+import numpy as np
 from influxdb import InfluxDBClient
 from influxdb import DataFrameClient
 
@@ -74,12 +75,13 @@ def transform_to_dict(s, tags):
     dic = {}
     for tag in tags:
         dic[tag] = s[tag]
-
+    #print(dic)
     return dic
 
 
 
 class Influx_Dataframe_Client(object):
+    #Connection details
     host = ""
     port = ""
     username = ""
@@ -87,12 +89,16 @@ class Influx_Dataframe_Client(object):
     database = ""
     ssl= ""
     verify_ssl = ""
+    #clients for influxDB both DataFrameClient and the InfluxDBClient
     client = None
     df_client = None
     data = None
 
-    # The class "constructor" - It's actually an initializer
+
     def __init__(self, config_file):
+        '''
+        Constructor reads credentials from config file and establishes a connection
+        '''
         # read from config file
         Config = configparser.ConfigParser()
         Config.read(config_file)
@@ -101,31 +107,20 @@ class Influx_Dataframe_Client(object):
         self.password = Config.get("DB_config", "password")
         self.database = Config.get("DB_config", "database")
         self.protocol = Config.get("DB_config", "protocol")
-        #self.measurement = Config.get("DB_config","measurement")
         self.port = Config.get("DB_config", "port")
         self.use_ssl = Config.get("DB_config", "use_ssl")
         self.verify_ssl = Config.get("DB_config", "verify_ssl")
-        print(self.use_ssl)
-        print(self.verify_ssl)
-        #self.tags = Config.get("wifi_metadata", "tags")
-        #self.tags = self.tags.split(',')
-        #self.fields = Config.get("wifi_metadata", "fields")
-        #self.fields=self.fields.split(',')
+        #make connection to of influxDB server
+        self.make_client()
 
+
+    def make_client(self):
     # setup client both InfluxDBClient and DataFrameClient
     # DataFrameClient is for queries and InfluxDBClient is for writes
-    def make_client(self):
-
         self.client = InfluxDBClient(self.host, 8086, self.username, self.password, self.database,
                                 self.use_ssl, self.verify_ssl)
         self.df_client = DataFrameClient(self.host, 8086, self.username, self.password, self.database,
                                 self.use_ssl, self.verify_ssl)
-        '''
-        self.client = InfluxDBClient(self.host, 8086, self.username, self.password, self.database,
-                                True, True)
-        self.df_client = DataFrameClient(self.host, 8086, self.username, self.password, self.database,
-                                True, True)
-        '''
 
     def expose_influx_client(self):
         #Expose InfluxDBClient to user so they utilize all functions of InfluxDBClient
@@ -138,10 +133,19 @@ class Influx_Dataframe_Client(object):
     def build_json(self,data, tags, fields, measurement):
 
         #print(data.head())
+        #data['measurement'] = measurement
+
+        print(data.head())
+        return_copy = data.copy
+        #return_copy["measurement"] = measurement
         data['measurement'] = measurement
-        #print(data.head())
         data["tags"] = data.apply(transform_to_dict, tags=tags, axis=1)
+        newcol = data.apply(transform_to_dict, tags=tags, axis=1)
+        #data.assign(tags=newcol)
+        #print(data.head())
         data["fields"] = data.apply(transform_to_dict, tags=fields, axis=1)
+
+        print(data.head())
         #print( data[["measurement","time", "tags", "fields"]].head())
         #build a list of dictionaries containing json data to give to client
         #only take relevant columns from dataframe
@@ -171,6 +175,7 @@ class Influx_Dataframe_Client(object):
         return list_to_return
 
     def list_retention_policies(self):
+
         '''
         Returns a list of dictionaries with all the databases
         on the influxDB server and their associated retention policies
@@ -188,16 +193,60 @@ class Influx_Dataframe_Client(object):
         return df
 
     def query(self, query, use_database = None):
-        query_result = self.client.query(query, use_database)
-        return query_result
+        query_result = self.client.query(query, database=use_database)
+        return query_result.raw
 
-    def specific_query(self,database,measurement,fields=None,start_time=None,end_time=None,tags=None,values=None):
+    def show_meta_data(self, database, measurement):
+        '''
+        Returns a list of TAG KEYS for specified measurement in specified database
+        Equivalent query is below
+        SHOW TAG KEYS FROM "MEASUREMENT_ARGUMENT"
+        '''
+
+        result_list = []
+        #generate query string and make query
+        query_string = 'SHOW TAG KEYS FROM ' +'\"' + measurement + "\""
+        query_result = self.client.query(query_string, database=database)
+        #add all of the tag values into a list to be returned
+        #query result is a generator
+        for temp_dict in query_result.get_points():
+            result_list.append(temp_dict['tagKey'])
+        return result_list
+
+    def get_meta_data(self,database, measurement,tag):
+        '''
+        Returns a list of TAG VALUES for specified measurement in specified database
+        Equivalent query is below
+        SHOW TAG VALUES FROM "MEASUREMENT_ARGUMENT" WITH KEY IN = "TAG_ARGUMENT"
+        '''
+        result_list = []
+        #generate query string and make query
+        query_string = 'SHOW TAG VALUES FROM ' + '\"' + measurement + '\"' + 'WITH KEY = \"' + tag + '\"'
+        query_result = self.client.query(query_string, database=database)
+
+        #add all of the tag values into a list to be returned
+        #query result is a generator
+        for temp_dict in query_result.get_points():
+            result_list.append(temp_dict['value'])
+
+        return result_list
+    def get_meta_data_time_series(self,database, measurement, tags,start_time=None,end_time=None):
+        '''
+        Returns tags along with the time stamps
+        '''
+
+        #get all data with from measurement
+        df = self.specific_query(database,measurement,start_time=start_time,end_time=end_time)
+        return df[tags]
+
+    def specific_query(self,database,measurement,fields=None,start_time=None,end_time=None,tags=None,values=None,groupList=None,groupTime=None):
         '''
         This function returns a dataframe with the results of the specified query
 
         '''
         tag_string = ""
         time_string = ""
+        group_string = ""
         df = {}
         #Create base query with fields and measurement
         query_string = "SELECT "
@@ -247,6 +296,15 @@ class Influx_Dataframe_Client(object):
             except BaseException:
                 print("Tags and values do not match")
                 return pd.DataFrame()
+        if (groupList != None):
+            query_string = query_string + "GROUP BY"
+            for x in range(len(groupList)):
+                if (x > 0):
+                    query_string = query_string + ","
+                if (groupList[x] == "time"):
+                    query_string = query_string + "time(" + groupTime + ")"
+                else:
+                    query_string = query_string + "\""+groupList[x]+"\""
 
         #Add optional parts of query
         if (time_string != "" or tag_string != ""):
@@ -257,6 +315,8 @@ class Influx_Dataframe_Client(object):
                 if (time_string != ""):
                     query_string = query_string + " AND "
                 query_string = query_string + tag_string
+        if (group_string != ""):
+            query_string = query_string + group_string
 
         print(query_string)
         df = self.df_client.query(query_string, database=self.database,chunked=True, chunk_size=256)

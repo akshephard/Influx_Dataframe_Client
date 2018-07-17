@@ -154,13 +154,13 @@ class Influx_Dataframe_Client(object):
         #print(data.head())
         return json
 
-    def post_to_DB(self,json):
-        ret = self.client.write_points(json,batch_size=16384)
+    def post_to_DB(self,json,database=None):
+        ret = self.client.write_points(json,database=database,batch_size=16384)
         return ret
 
-    def write_data(self,data,tags,fields,measurement):
+    def write_data(self,data,tags,fields,measurement,database=None):
         json = self.build_json(data,tags,fields,measurement)
-        self.post_to_DB(json)
+        self.post_to_DB(json,database=database)
 
     def list_DB(self):
         '''

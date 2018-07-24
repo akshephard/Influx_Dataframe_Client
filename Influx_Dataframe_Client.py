@@ -70,6 +70,7 @@ i.e.
                 ]
 
 '''
+'''
 def transform_to_dict(s, tags):
     #print(s)
     dic = {}
@@ -77,6 +78,14 @@ def transform_to_dict(s, tags):
         dic[tag] = s[tag]
     #print(dic)
     return dic
+'''
+
+def transform_to_dict(s, key):
+    dic = {}
+    for tag in key: # List of keys wanting to turn into dictionary
+        dic[tag] = s
+    return dic
+
 
 
 
@@ -117,10 +126,13 @@ class Influx_Dataframe_Client(object):
     def make_client(self):
     # setup client both InfluxDBClient and DataFrameClient
     # DataFrameClient is for queries and InfluxDBClient is for writes
+        print(self.verify_ssl)
+        print(self.use_ssl)
+        print(self.host)
         self.client = InfluxDBClient(self.host, 8086, self.username, self.password, self.database,
-                                self.use_ssl, self.verify_ssl)
+                                ssl=False, verify_ssl=False)
         self.df_client = DataFrameClient(self.host, 8086, self.username, self.password, self.database,
-                                self.use_ssl, self.verify_ssl)
+                                ssl=False, verify_ssl=False)
 
     def expose_influx_client(self):
         #Expose InfluxDBClient to user so they utilize all functions of InfluxDBClient
@@ -129,27 +141,33 @@ class Influx_Dataframe_Client(object):
     def expose_data_client(self):
         #Expose DataFrameClient to user so they can utilize all functions of DataFrameClient
         return self.df_client
-
+    '''
     def build_json(self,data, tags, fields, measurement):
 
-        #print(data.head())
-        #data['measurement'] = measurement
-
-        print(data.head())
-        return_copy = data.copy
-        #return_copy["measurement"] = measurement
+        #add relevant fields for conversion to json
         data['measurement'] = measurement
+        #tags and fields must be converted to dictionaries
         data["tags"] = data.apply(transform_to_dict, tags=tags, axis=1)
-        newcol = data.apply(transform_to_dict, tags=tags, axis=1)
-        #data.assign(tags=newcol)
-        #print(data.head())
         data["fields"] = data.apply(transform_to_dict, tags=fields, axis=1)
 
-        print(data.head())
-        #print( data[["measurement","time", "tags", "fields"]].head())
+
         #build a list of dictionaries containing json data to give to client
         #only take relevant columns from dataframe
         json = data[["measurement","time", "tags", "fields"]].to_dict("records")
+
+        return json
+        '''
+
+    def build_json(self,data, tags, fields, measurement):
+
+        data['measurement'] = measurement
+        data['tags'] = data.iloc[:,1].apply(transform_to_dict, key=tags) # Turn tags into dictionary and apply to column 'tags'
+        data["fields"] = data.iloc[:,2].apply(transform_to_dict, key=fields)
+
+        #build a list of dictionaries containing json data to give to client
+        #only take relevant columns from dataframe
+        json = data[["measurement","time", "tags", "fields"]].to_dict("records")
+
         #print(json)
         #print(data.head())
         return json

@@ -68,7 +68,7 @@ def get_room(s):
 
 ######################## MAIN ########################
 
-def main(conf_file="/home/werd/lbnl_summer/wifi_data_push/wifi_local_config.ini"):
+def main(conf_file="/home/werd/lbnl_summer/Influx_Dataframe_Client/measurement_details.ini"):
     # read arguments passed at .py file call
     parser = argparse.ArgumentParser()
     parser.add_argument("pickle", help="pickle file")
@@ -81,49 +81,34 @@ def main(conf_file="/home/werd/lbnl_summer/wifi_data_push/wifi_local_config.ini"
     conf_file = conf_file
     Config = configparser.ConfigParser()
     Config.read(conf_file)
+    database = Config.get("measurement_details","database")
+    measurement = Config.get("measurement_details","measurement")
+    tags = Config.get("measurement_details", "tags")
+    tags = tags.split(',')
+    fields = Config.get("measurement_details", "fields")
+    fields=fields.split(',')
 
-    #measurement = Config.get("DB_config","measurement")
-    #tags = Config.get("wifi_metadata", "tags")
-    #tags = tags.split(',')
-    #fields = Config.get("wifi_metadata", "fields")
-    #fields=fields.split(',')
+    print(database)
+    print(measurement)
+    print(tags)
+    print(fields)
+
+    # import dataframe from pickle file
+    whole_data = pd.read_pickle(pickle_file)
+    data = whole_data.head()
+
+
+
     fields = ['Value']
     tags = ['Meter_Name']
     measurement = 'Building_Meter'
 
-    # get and summarize wifi data
-    data = pd.read_pickle(pickle_file)
+    # import dataframe from pickle file
+    whole_data = pd.read_pickle(pickle_file)
+    data = whole_data.head()
 
-    #get dataframe in right format before creating json
-    #puts all of the columns associated with a timestamp together
-    print(data.head())
-    #data = data.stack()
-    #data = data.reset_index()
-    print(data.head())
-    #print(data.columns.values.tolist())
-    '''
-    data = data.stack()
-    data = data.reset_index()
+    #print(data)
 
-    #change time in correct format
-    #time_transform changes from x to Unix Epoch time
-    #time can also be in x format, make sure that final datatype is string or int
-    data.iloc[:,0] = data.iloc[:,0].apply(time_transform)
-
-    #rename columns so that the proper keys will appear in the json list
-    #containing all the individual measurement, also make sure time is int not float
-    data.columns = ['time', 'ap_name', 'AP_count']
-    #column_list = ['time','ap_name','AP_count','test_field']
-    #column_list.extend(tags)
-    #print(data.head())
-    data['parse_ap_name'] = data.iloc[:,1].apply(parse_ap)
-    data['building_number'] = data['parse_ap_name'].apply(get_building)
-    data['floor'] = data['parse_ap_name'].apply(get_floor)
-    data['room'] = data['parse_ap_name'].apply(get_room)
-    data['test_field'] = 1.0
-    '''
-
-    #print(data.head())
     #remove all of the rows which have NaN
     #optional depending on if your data contains NaN
     data.dropna(inplace=True)
@@ -132,33 +117,13 @@ def main(conf_file="/home/werd/lbnl_summer/wifi_data_push/wifi_local_config.ini"
 
     # create client
     test_client = Influx_Dataframe_Client('/home/werd/lbnl_summer/Influx_Dataframe_Client/local_server.ini')
-    #print(data[column_list].copy)
 
-    #uery_string = 'SHOW TAG KEYS FROM wifi_data9'
 
-    test_client.write_data(data,tags,fields,measurement,'new_building_test')
-    #test_result = test_client.query(query_string,'new_wifi_test')
-    #print(test_result['series'][0]['values'])
-    #print(test_client.show_meta_data('wifi_test','wifi_data9'))
-    #print(test_client.get_meta_data('wifi_test','wifi_data9','ap_name'))
-    #print(test_result)
-    #test_result = test_client.query(query_string,None)
-    #df_result = test_client.query_data(query_string_test)
-    #specific_query(self,database,field,measurement,tag,value):
-    #ields_list = ['AP_count']
-    #tags_list = ['building_number','floor']
-    #values_list = ['100','1']
-    #example queries with both time formats one in strong and the other in epoch
-    #if the fields parameter is left out it defaults to the following:
-    #query_result = test_client.specific_query('wifi_test',measurement,fields=fields_list,start_time=1459493000000000000, end_time=1459495000000000000,tags=tags_list,values=values_list)
-    #query_result2 = test_client.specific_query('wifi_test',measurement,start_time='2016-03-01 06:00:00', end_time='2016-04-02 08:00:00',tags=tags_list,values=values_list)
+    test_client.write_data(data,tags,fields,measurement,database)
 
-    #print(query_result)
-    #print(query_result2)
 
     test_client.list_DB()
     test_client.list_retention_policies()
-
     return
 
 if __name__ == "__main__":

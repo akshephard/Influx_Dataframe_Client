@@ -72,22 +72,14 @@ i.e.
 '''
 
 def transform_to_dict(s, tags):
-    #print(s)
+    '''
+    Returns a dictionary where the keys are passed in as a list and the values
+    are obtained from the apply function as a row
+    '''
     dic = {}
     for tag in tags:
         dic[tag] = s[tag]
-    #print(dic)
     return dic
-
-'''
-def transform_to_dict(s, key):
-    #print(s)
-    dic = {}
-    for tag in key: # List of keys wanting to turn into dictionary
-        dic[tag] = s
-    return dic
-'''
-
 
 
 class Influx_Dataframe_Client(object):
@@ -125,12 +117,16 @@ class Influx_Dataframe_Client(object):
         self.port = self.db_config.get("port")
         self.use_ssl = self.db_config.get("use_ssl")
         self.verify_ssl = self.db_config.get("verify_ssl")
-        self.make_client()
+        self.__make_client()
 
 
-    def make_client(self):
-    # setup client both InfluxDBClient and DataFrameClient
-    # DataFrameClient is for queries and InfluxDBClient is for writes
+    def __make_client(self):
+        '''
+        Setup client both InfluxDBClient and DataFrameClient
+        DataFrameClient is for queries and InfluxDBClient is for writes
+        Not needed by user
+        '''
+
         self.client = InfluxDBClient(host=self.host, port=self.port,
                     username=self.username, password=self.password,
                     database=self.database,ssl=self.use_ssl, verify_ssl=self.verify_ssl)
@@ -140,69 +136,58 @@ class Influx_Dataframe_Client(object):
 
 
     def expose_influx_client(self):
-        #Expose InfluxDBClient to user so they utilize all functions of InfluxDBClient
+        '''
+        Expose InfluxDBClient to user so they can utilize all functions of
+        InfluxDBClient if functionality is not provided by
+        Influx_Dataframe_Client module
+        '''
+
         return self.client
 
     def expose_data_client(self):
-        #Expose DataFrameClient to user so they can utilize all functions of DataFrameClient
+        '''
+        Expose DataFrameClient to user so they can utilize all functions of
+        DataFrameClient if functionality is not provided by
+        Influx_Dataframe_Client module
+        '''
+
         return self.df_client
 
-    def build_json(self,data, tags, fields, measurement):
+    def __build_json(self,data, tags, fields, measurement):
+        '''
+        This function is not necessary for the user.
 
-        #add relevant fields for conversion to json
+        Builds json dictionary list out of dataframe given in the format expected
+        by InfluxDBClient. Both tags and fields need to be lists which include
+        the columns in the dataframe that are going to be included in the tags
+        and fields dictionary
+        '''
         print(data.head())
         data['measurement'] = measurement
-        #tags and fields must be converted to dictionaries
-        #print(data.iloc[:,1])
-        #print(data.loc['ap_name'])
-        #print(data.loc[:,tags].apply(transform_to_dict))
-        #print(list(data))
         data["tags"] = data.loc[:,tags].apply(transform_to_dict, tags=tags, axis=1)
         data["fields"] = data.loc[:,fields].apply(transform_to_dict, tags=fields, axis=1)
-        #print(data.loc[:,fields])
-        #print(fields)
-        #data["fields"] = data.loc[:,fields].apply(transform_to_dict, tags=tags, axis=1)
-        #data["fields"] = data.apply(transform_to_dict, tags=fields, axis=1)
-
-
-        #print(data.head())
-        #build a list of dictionaries containing json data to give to client
-        #only take relevant columns from dataframe
-        json = data[["measurement","time", "tags", "fields"]].to_dict("records")
-        #print(json)
-        return json
-
-    '''
-    def build_json(self,data, tags, fields, measurement):
-
-        #print(list(data))
-        data['measurement'] = measurement
-        print("tags are = " + str(tags))
-        print(fields)
-        data['tags'] = data.iloc[:,1].apply(transform_to_dict, key=tags) # Turn tags into dictionary and apply to column 'tags'
-        data["fields"] = data.iloc[:,2].apply(transform_to_dict, key=fields)
-
-        #build a list of dictionaries containing json data to give to client
-        #only take relevant columns from dataframe
         json = data[["measurement","time", "tags", "fields"]].to_dict("records")
 
-        #print(json)
-        #print(data.head())
         return json
-    '''
+
     def post_to_DB(self,json,database=None):
-        #print(json)
         ret = self.client.write_points(json,database=database,batch_size=16384)
         return ret
 
     def write_data(self,data,tags,fields,measurement,database=None):
-        #print(list(data))
-        if 'time' not in list(data):
-            #print(data.head())
-            data.index.name = 'time'
-            data = data.reset_index()
-        json = self.build_json(data,tags,fields,measurement)
-        #print(json)
+        '''
+        Write a dataframe to the specified measurement, the user needs to
+        specify the tags and fields that are to be included in the measurement
+        as lists
+        '''
+
+        if 'time' not in list(data): #check to see if the time column is present
+            data.index.name = 'time' #change the index to name to time
+            data = data.reset_index() # give seqeuential index to dataframe
+
+        #Turn dataframe into correct json format as described in beginning comments
+        json = self.__build_json(data,tags,fields,measurement)
+        print(json)
         self.post_to_DB(json,database=database)
 
     def list_DB(self):
@@ -232,10 +217,19 @@ class Influx_Dataframe_Client(object):
         return dict_list
 
     def query_data(self,query):
+        '''
+        Sends the specified query string to the specified database using
+        InfluxDBClient the query must be in Influx Query Language
+        '''
         df = self.df_client.query(query, database='wifi_data8',chunked=True, chunk_size=256)
         return df
 
     def query(self, query, use_database = None):
+        '''
+        Sends the specified query string to the specified database using the
+        DataframeClient the query must be in Influx Query Language returns a
+        dataframe
+        '''
         query_result = self.client.query(query, database=use_database)
         return query_result.raw
 
@@ -285,7 +279,10 @@ class Influx_Dataframe_Client(object):
     def specific_query(self,database,measurement,fields=None,start_time=None,end_time=None,tags=None,values=None,groupList=None,groupTime=None):
         '''
         This function returns a dataframe with the results of the specified query
-
+        the query is built using the parameters provided by the user and
+        formatted into Influx Query Language. All fields are optional except the
+        database and measurement parameter. This function always returns a
+        dataframe even if the response has no results
         '''
         tag_string = ""
         time_string = ""
@@ -375,6 +372,10 @@ class Influx_Dataframe_Client(object):
         return df
 
     def delete_based_on_time(self,database,measurement,start_time=None,end_time=None):
+        '''
+        Delete data from measurement. If no time is specified then all data will
+        be deleted from the measurement.
+        '''
         time_string = ""
         query_string = "DELETE FROM %s "%measurement
 

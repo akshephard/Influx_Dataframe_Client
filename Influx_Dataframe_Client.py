@@ -105,35 +105,39 @@ class Influx_Dataframe_Client(object):
     data = None
 
 
-    def __init__(self, config_file):
+    def __init__(self, config_file, db_section=None):
         '''
         Constructor reads credentials from config file and establishes a connection
         '''
         # read from config file
         Config = configparser.ConfigParser()
         Config.read(config_file)
-        self.host = Config.get("DB_config", "host")
-        self.username = Config.get("DB_config", "username")
-        self.password = Config.get("DB_config", "password")
-        self.database = Config.get("DB_config", "database")
-        self.protocol = Config.get("DB_config", "protocol")
-        self.port = Config.get("DB_config", "port")
-        self.use_ssl = Config.get("DB_config", "use_ssl")
-        self.verify_ssl = Config.get("DB_config", "verify_ssl")
-        #make connection to of influxDB server
+        if db_section != None:
+            self.db_config = Config[db_section]
+        else:
+            self.db_config = Config["DB_config"]
+
+        self.host = self.db_config.get("host")
+        self.username = self.db_config.get("username")
+        self.password = self.db_config.get("password")
+        self.database = self.db_config.get("database")
+        self.protocol = self.db_config.get("protocol")
+        self.port = self.db_config.get("port")
+        self.use_ssl = self.db_config.get("use_ssl")
+        self.verify_ssl = self.db_config.get("verify_ssl")
         self.make_client()
 
 
     def make_client(self):
     # setup client both InfluxDBClient and DataFrameClient
     # DataFrameClient is for queries and InfluxDBClient is for writes
-        print(self.verify_ssl)
-        print(self.use_ssl)
-        print(self.host)
-        self.client = InfluxDBClient(self.host, 8086, self.username, self.password, self.database,
-                                ssl=self.use_ssl, verify_ssl=self.verify_ssl)
-        self.df_client = DataFrameClient(self.host, 8086, self.username, self.password, self.database,
-                                ssl=self.use_ssl, verify_ssl=self.verify_ssl)
+        self.client = InfluxDBClient(host=self.host, port=self.port,
+                    username=self.username, password=self.password,
+                    database=self.database,ssl=self.use_ssl, verify_ssl=self.verify_ssl)
+        self.df_client = DataFrameClient(host=self.host, port=self.port,
+                    username=self.username, password=self.password,
+                    database=self.database,ssl=self.use_ssl, verify_ssl=self.verify_ssl)
+
 
     def expose_influx_client(self):
         #Expose InfluxDBClient to user so they utilize all functions of InfluxDBClient
@@ -304,9 +308,9 @@ class Influx_Dataframe_Client(object):
                 #Must have a start_time for our query
                 #Check to see format of time that was specified
                 time_string = time_string + "time > "
-                if(isinstance(start_time, str)): # Need quotes for date format
+                if type(end_time) == str:
                     time_string = time_string + "\'" + start_time + '\''
-                if(isinstance(start_time, int)): # No quotes for epoch time
+                if(type(end_time) == int):
                     time_string = time_string + str(start_time)
 
             if (end_time != None):
@@ -315,10 +319,13 @@ class Influx_Dataframe_Client(object):
                 if (time_string != ""):
                     time_string = time_string + " AND "
                 time_string = time_string + "time < "
-                if(isinstance(start_time, str)): # Need quotes for date format
+
+                if type(end_time) == str:
                     time_string = time_string + "\'" + end_time + '\''
-                if(isinstance(start_time, int)): # No quotes for epoch time
+
+                if type(end_time) == int:
                     time_string = time_string + str(end_time)
+
 
         #Create tag portion of query if it is specified
         if (tags != None and values != None):
@@ -366,3 +373,37 @@ class Influx_Dataframe_Client(object):
             #Must have an empty result make empty dataframe
             df = pd.DataFrame()
         return df
+
+    def delete_based_on_time(self,database,measurement,start_time=None,end_time=None):
+        time_string = ""
+        query_string = "DELETE FROM %s "%measurement
+
+        if (start_time != None):
+            #Must have a start_time for our query
+            #Check to see format of time that was specified
+            time_string = time_string + "time > "
+            if type(end_time) == str:
+                time_string = time_string + "\'" + start_time + '\''
+            if type(end_time) == int:
+                time_string = time_string + str(start_time)
+
+        if (end_time != None):
+            #Must have a end_time for our query
+            #Check to see format of time that was specified
+            if (time_string != ""):
+                time_string = time_string + " AND "
+            time_string = time_string + "time < "
+
+            if type(end_time) == str:
+                time_string = time_string + "\'" + end_time + '\''
+
+            if type(end_time) == int:
+                time_string = time_string + str(end_time)
+
+        if time_string != "":
+            query_string = query_string + " WHERE "
+            if (time_string != ""):
+                query_string = query_string + time_string
+
+        print(query_string)
+        df = self.df_client.query(query_string, database=self.database,chunked=True, chunk_size=256)

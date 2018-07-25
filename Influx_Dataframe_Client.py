@@ -70,7 +70,7 @@ i.e.
                 ]
 
 '''
-'''
+
 def transform_to_dict(s, tags):
     #print(s)
     dic = {}
@@ -78,14 +78,15 @@ def transform_to_dict(s, tags):
         dic[tag] = s[tag]
     #print(dic)
     return dic
-'''
 
+'''
 def transform_to_dict(s, key):
+    #print(s)
     dic = {}
     for tag in key: # List of keys wanting to turn into dictionary
         dic[tag] = s
     return dic
-
+'''
 
 
 
@@ -141,26 +142,39 @@ class Influx_Dataframe_Client(object):
     def expose_data_client(self):
         #Expose DataFrameClient to user so they can utilize all functions of DataFrameClient
         return self.df_client
-    '''
+
     def build_json(self,data, tags, fields, measurement):
 
         #add relevant fields for conversion to json
+        print(data.head())
         data['measurement'] = measurement
         #tags and fields must be converted to dictionaries
-        data["tags"] = data.apply(transform_to_dict, tags=tags, axis=1)
-        data["fields"] = data.apply(transform_to_dict, tags=fields, axis=1)
+        #print(data.iloc[:,1])
+        #print(data.loc['ap_name'])
+        #print(data.loc[:,tags].apply(transform_to_dict))
+        #print(list(data))
+        data["tags"] = data.loc[:,tags].apply(transform_to_dict, tags=tags, axis=1)
+        data["fields"] = data.loc[:,fields].apply(transform_to_dict, tags=fields, axis=1)
+        #print(data.loc[:,fields])
+        #print(fields)
+        #data["fields"] = data.loc[:,fields].apply(transform_to_dict, tags=tags, axis=1)
+        #data["fields"] = data.apply(transform_to_dict, tags=fields, axis=1)
 
 
+        #print(data.head())
         #build a list of dictionaries containing json data to give to client
         #only take relevant columns from dataframe
         json = data[["measurement","time", "tags", "fields"]].to_dict("records")
-
+        #print(json)
         return json
-        '''
 
+    '''
     def build_json(self,data, tags, fields, measurement):
 
+        #print(list(data))
         data['measurement'] = measurement
+        print("tags are = " + str(tags))
+        print(fields)
         data['tags'] = data.iloc[:,1].apply(transform_to_dict, key=tags) # Turn tags into dictionary and apply to column 'tags'
         data["fields"] = data.iloc[:,2].apply(transform_to_dict, key=fields)
 
@@ -171,13 +185,20 @@ class Influx_Dataframe_Client(object):
         #print(json)
         #print(data.head())
         return json
-
+    '''
     def post_to_DB(self,json,database=None):
+        #print(json)
         ret = self.client.write_points(json,database=database,batch_size=16384)
         return ret
 
     def write_data(self,data,tags,fields,measurement,database=None):
-        json = self.build_json(data,tags,fields,measurement)
+        #print(list(data))
+        if 'time' not in list(data):
+            #print(data.head())
+            data.index.name = 'time'
+            data = data.reset_index()
+        json = self.build_json(data.head(),tags,fields,measurement)
+        #print(json)
         self.post_to_DB(json,database=database)
 
     def list_DB(self):

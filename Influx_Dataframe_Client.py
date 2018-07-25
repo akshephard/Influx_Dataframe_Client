@@ -131,9 +131,9 @@ class Influx_Dataframe_Client(object):
         print(self.use_ssl)
         print(self.host)
         self.client = InfluxDBClient(self.host, 8086, self.username, self.password, self.database,
-                                ssl=False, verify_ssl=False)
+                                ssl=self.use_ssl, verify_ssl=self.verify_ssl)
         self.df_client = DataFrameClient(self.host, 8086, self.username, self.password, self.database,
-                                ssl=False, verify_ssl=False)
+                                ssl=self.use_ssl, verify_ssl=self.verify_ssl)
 
     def expose_influx_client(self):
         #Expose InfluxDBClient to user so they utilize all functions of InfluxDBClient
@@ -197,7 +197,7 @@ class Influx_Dataframe_Client(object):
             #print(data.head())
             data.index.name = 'time'
             data = data.reset_index()
-        json = self.build_json(data.head(),tags,fields,measurement)
+        json = self.build_json(data,tags,fields,measurement)
         #print(json)
         self.post_to_DB(json,database=database)
 

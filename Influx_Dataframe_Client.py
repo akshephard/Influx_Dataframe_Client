@@ -3,73 +3,101 @@ import pandas as pd
 import numpy as np
 from influxdb import InfluxDBClient
 from influxdb import DataFrameClient
-
 '''
+Two dataframe formats are accepted both are shown below:
+                       time              ap_name  AP_count             parse_ap_name building_number floor room  test_field
+0 2016-04-01 07:00:00+00:00  ap135-100-103d-r177       1.0  [ap135, 100, 103d, r177]             100     1  03d         1.0
+1 2016-04-01 07:00:00+00:00   ap135-100-121-r177       3.0   [ap135, 100, 121, r177]             100     1  121         1.0
+2 2016-04-01 07:00:00+00:00   ap135-100-139-r177       6.0   [ap135, 100, 139, r177]             100     1  139         1.0
+3 2016-04-01 07:00:00+00:00   ap135-100-140-r177       5.0   [ap135, 100, 140, r177]             100     1  140         1.0
+4 2016-04-01 07:00:00+00:00  ap135-100-149b-r177       1.0  [ap135, 100, 149b, r177]             100     1  49b         1.0
+
+The same dataframe can also be given as where the index is the time:
+                           AP_count              ap_name building_number floor room  test_field
+2016-04-01 07:00:00+00:00         1  ap135-100-103d-r177             100     1  03d           1
+2016-04-01 07:00:00+00:00         5   ap135-100-150-r177             100     1  150           1
+2016-04-01 07:00:00+00:00         3   ap135-100-121-r177             100     1  121           1
+2016-04-01 07:00:00+00:00         5   ap135-100-140-r177             100     1  140           1
+2016-04-01 07:00:00+00:00         1  ap135-100-149b-r177             100     1  49b           1
+
+This is converted to the following json before being given to DataFrameClient during write
+[
+  {
+    'fields': {
+        'AP_count': 1.0,
+        'test_field': 1.0
+        },
+    'time': Timestamp('2016-04-01 07:00:00+0000', tz='UTC'),
+    'tags': {
+        'floor': '1',
+        'building_number': '100',
+        'ap_name': 'ap135-100-103d-r177',
+        'room': '03d'
+        },
+    'measurement': 'wifi_data9'
+    },
+  {
+    'fields': {
+        'AP_count': 3.0,
+        'test_field': 1.0
+        },
+    'time': Timestamp('2016-04-01 07:00:00+0000', tz='UTC'),
+    'tags': {
+        'floor': 1,
+        'building_number': '100',
+        'ap_name': 'ap135-100-121-r177',
+        'room': '121'
+        },
+    'measurement': 'wifi_data9'
+    },
+  {
+    'fields': {
+        'AP_count': 6.0,
+        'test_field': 1.0
+        },
+    'time': Timestamp('2016-04-01 07:00:00+0000', tz='UTC'),
+    'tags': {
+        'floor': 1,
+        'building_number': '100',
+        'ap_name': 'ap135-100-139-r177',
+        'room': '139'
+        },
+  'measurement': 'wifi_data9'
+    },
+  {
+    'fields': {
+        'AP_count': 5.0,
+        'test_field': 1.0
+        },
+    'time': Timestamp('2016-04-01 07:00:00+0000', tz='UTC'),
+    'tags': {
+        'floor': 1,
+        'building_number': '100',
+        'ap_name': 'ap135-100-140-r177',
+        'room': '140'
+        },
+    'measurement': 'wifi_data9'},
+  {
+    'fields': {
+        'AP_count': 1.0,
+        'test_field': 1.0
+        },
+    'time': Timestamp('2016-04-01 07:00:00+0000', tz='UTC'),
+    'tags': {
+        'floor': '1',
+        'building_number': '100',
+        'ap_name': 'ap135-100-149b-r177',
+        'room': '49b'
+        },
+    'measurement': 'wifi_data9'
+    }
+ ]
+Time can be specified in epoch time or Influx format
+
 When making queries, identifiers may be put into Double quotes depending on the
 characters they contain. String literals i.e. tag values must be in single quotes!
-
-class influxdb.InfluxDBClient(host=u'localhost',
- port=8086, username=u'root', password=u'root',
- database=None, ssl=False, verify_ssl=False,
- timeout=None, retries=3, use_udp=False,
- udp_port=4444, proxies=None)
-
-class influxdb.DataFrameClient(host=u'localhost',
- port=8086, username=u'root', password=u'root',
- database=None, ssl=False, verify_ssl=False,
- timeout=None, retries=3, use_udp=False,
- udp_port=4444, proxies=None)
-
-Take dataframe like the following example:
-time                AP_count ap_name             building_number floor room
-----                -------- -------             --------------- ----- ----
-1459494000000000000 1        ap135-100-103d-r177 100             1     03d
-1459494000000000000 1        ap135-100-149b-r177 100             1     49b
-1459494000000000000 5        ap135-100-140-r177  100             1     140
-1459494000000000000 6        ap135-100-139-r177  100             1     139
-1459494000000000000 3        ap135-100-121-r177  100             1     121
-
-Where AP_count is a field, ap_name, building_number, floor, and room are all tags
-time is the timestamp associated with each row
-
-Each columnn in dataframe grab column name first and parse name
-add all points as a list of dictionaries of json
-Each column of the dataframe is turned into a json dictionary and added to a list
-of json dictionaries which can be given to InfluxDBClient
-
-i.e.
-
-
-            pushData = [
-                    {
-                        "measurement": measurement,
-                        "tags": {
-                            tags: current_ap_name,
-                            "building_number": 90,
-                            "floor": 2,
-                            "room": 50
-                        },
-                        "time": pushTime,
-                        "fields": {
-                            fields: ap_value
-                        }
-                    },
-                    {
-                        "measurement": measurement,
-                        "tags": {
-                            tags: current_ap_name,
-                            "building_number": 90,
-                            "floor": 2,
-                            "room": 50
-                        },
-                        "time": pushTime,
-                        "fields": {
-                            fields: ap_value
-                        }
-                    }
-                ]
-
 '''
+
 
 def transform_to_dict(s, tags):
     '''
@@ -89,8 +117,8 @@ class Influx_Dataframe_Client(object):
     username = ""
     password = ""
     database = ""
-    ssl= ""
-    verify_ssl = ""
+    use_ssl= False
+    verify_ssl_is_on = False
     #clients for influxDB both DataFrameClient and the InfluxDBClient
     client = None
     df_client = None
@@ -116,7 +144,7 @@ class Influx_Dataframe_Client(object):
         self.protocol = self.db_config.get("protocol")
         self.port = self.db_config.get("port")
         self.use_ssl = self.db_config.get("use_ssl")
-        self.verify_ssl = self.db_config.get("verify_ssl")
+        self.verify_ssl_is_on = self.db_config.get("verify_ssl_is_on")
         self.__make_client()
 
 
@@ -129,10 +157,12 @@ class Influx_Dataframe_Client(object):
 
         self.client = InfluxDBClient(host=self.host, port=self.port,
                     username=self.username, password=self.password,
-                    database=self.database,ssl=self.use_ssl, verify_ssl=self.verify_ssl)
+                    database=self.database,ssl=bool(self.use_ssl), verify_ssl=bool(self.verify_ssl_is_on))
         self.df_client = DataFrameClient(host=self.host, port=self.port,
                     username=self.username, password=self.password,
-                    database=self.database,ssl=self.use_ssl, verify_ssl=self.verify_ssl)
+                    database=self.database,ssl=bool(self.use_ssl), verify_ssl=bool(self.verify_ssl_is_on))
+
+
 
 
     def expose_influx_client(self):

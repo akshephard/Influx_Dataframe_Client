@@ -143,8 +143,8 @@ class Influx_Dataframe_Client(object):
         self.database = self.db_config.get("database")
         self.protocol = self.db_config.get("protocol")
         self.port = self.db_config.get("port")
-        self.use_ssl = self.db_config.get("use_ssl")
-        self.verify_ssl_is_on = self.db_config.get("verify_ssl_is_on")
+        self.use_ssl = self.db_config.getboolean("use_ssl")
+        self.verify_ssl_is_on = self.db_config.getboolean("verify_ssl_is_on")
         self.__make_client()
 
 
@@ -157,10 +157,10 @@ class Influx_Dataframe_Client(object):
 
         self.client = InfluxDBClient(host=self.host, port=self.port,
                     username=self.username, password=self.password,
-                    database=self.database,ssl=bool(self.use_ssl), verify_ssl=bool(self.verify_ssl_is_on))
+                    database=self.database,ssl=self.use_ssl, verify_ssl=self.verify_ssl_is_on)
         self.df_client = DataFrameClient(host=self.host, port=self.port,
                     username=self.username, password=self.password,
-                    database=self.database,ssl=bool(self.use_ssl), verify_ssl=bool(self.verify_ssl_is_on))
+                    database=self.database,ssl=self.use_ssl, verify_ssl=self.verify_ssl_is_on)
 
 
 
@@ -192,7 +192,11 @@ class Influx_Dataframe_Client(object):
         the columns in the dataframe that are going to be included in the tags
         and fields dictionary
         '''
+<<<<<<< HEAD
         #print(data.head())
+=======
+        # print(data.head())
+>>>>>>> b5133311e593a80a4cc7fa2fc174519a356be1e4
         data['measurement'] = measurement
         data["tags"] = data.loc[:,tags].apply(transform_to_dict, tags=tags, axis=1)
         data["fields"] = data.loc[:,fields].apply(transform_to_dict, tags=fields, axis=1)
@@ -211,13 +215,13 @@ class Influx_Dataframe_Client(object):
         as lists
         '''
 
-        if 'time' not in list(data): #check to see if the time column is present
+        if 'time' not in data.columns: #check to see if the time column is present
             data.index.name = 'time' #change the index to name to time
             data = data.reset_index() # give seqeuential index to dataframe
 
         #Turn dataframe into correct json format as described in beginning comments
         json = self.__build_json(data,tags,fields,measurement)
-        print(json)
+        # print(json)
         self.post_to_DB(json,database=database)
 
     def list_DB(self):
@@ -391,7 +395,6 @@ class Influx_Dataframe_Client(object):
         if (group_string != ""):
             query_string = query_string + group_string
 
-        #print(query_string)
         df = self.df_client.query(query_string, database=self.database,chunked=True, chunk_size=256)
 
         if (measurement in df):
@@ -436,5 +439,5 @@ class Influx_Dataframe_Client(object):
             if (time_string != ""):
                 query_string = query_string + time_string
 
-        print(query_string)
+        # print(query_string)
         df = self.df_client.query(query_string, database=self.database,chunked=True, chunk_size=256)

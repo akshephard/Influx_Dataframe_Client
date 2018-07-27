@@ -150,6 +150,8 @@ class Influx_Dataframe_Client(object):
 
     def __make_client(self):
         '''
+        This function is not necessary for the user.
+
         Setup client both InfluxDBClient and DataFrameClient
         DataFrameClient is for queries and InfluxDBClient is for writes
         Not needed by user
@@ -162,6 +164,31 @@ class Influx_Dataframe_Client(object):
                     username=self.username, password=self.password,
                     database=self.database,ssl=self.use_ssl, verify_ssl=self.verify_ssl_is_on)
 
+    def __build_json(self,data, tags, fields, measurement):
+        '''
+        This function is not necessary for the user.
+
+        Builds json dictionary list out of dataframe given in the format expected
+        by InfluxDBClient. Both tags and fields need to be lists which include
+        the columns in the dataframe that are going to be included in the tags
+        and fields dictionary
+        '''
+
+        data['measurement'] = measurement
+        data["tags"] = data.loc[:,tags].apply(transform_to_dict, tags=tags, axis=1)
+        data["fields"] = data.loc[:,fields].apply(transform_to_dict, tags=fields, axis=1)
+        json = data[["measurement","time", "tags", "fields"]].to_dict("records")
+
+        return json
+
+    def __post_to_DB(self,json,database=None):
+        '''
+        This function is necessary for the user.
+
+        Sends json dictionary list to specified database to InfluxDBClient
+        '''
+        ret = self.client.write_points(json,database=database,batch_size=16384)
+        return ret
 
 
 
@@ -183,33 +210,18 @@ class Influx_Dataframe_Client(object):
 
         return self.df_client
 
-    def __build_json(self,data, tags, fields, measurement):
-        '''
-        This function is not necessary for the user.
 
-        Builds json dictionary list out of dataframe given in the format expected
-        by InfluxDBClient. Both tags and fields need to be lists which include
-        the columns in the dataframe that are going to be included in the tags
-        and fields dictionary
-        '''
-
-        data['measurement'] = measurement
-        data["tags"] = data.loc[:,tags].apply(transform_to_dict, tags=tags, axis=1)
-        data["fields"] = data.loc[:,fields].apply(transform_to_dict, tags=fields, axis=1)
-        json = data[["measurement","time", "tags", "fields"]].to_dict("records")
-
-        return json
-
-    def post_to_DB(self,json,database=None):
-        ret = self.client.write_points(json,database=database,batch_size=16384)
-        return ret
-
-    def write_data(self,data,tags,fields,measurement,database=None):
+    def write_dataframe(self,data,tags,fields,measurement,database=None):
         '''
         Write a dataframe to the specified measurement, the user needs to
         specify the tags and fields that are to be included in the measurement
         as lists
         '''
+
+        #set default database
+        if (database == None):
+            database = self.database
+
 
         if 'time' not in data.columns: #check to see if the time column is present
             data.index.name = 'time' #change the index to name to time
@@ -217,8 +229,46 @@ class Influx_Dataframe_Client(object):
 
         #Turn dataframe into correct json format as described in beginning comments
         json = self.__build_json(data,tags,fields,measurement)
-        # print(json)
-        self.post_to_DB(json,database=database)
+
+        ret = self.__post_to_DB(json,database)
+
+        return ret
+
+    def write_csv(self,csv_fileName,tags,fields,measurement,database=None):
+        '''
+        Take in csv file and upload to database. User must specify list of tags
+        and a list of fields as well as the csv file name. Database is optional
+        by default the database specified by the client will be used
+        '''
+
+        #set default database
+        if (database == None):
+            database = self.database
+
+        data = pd.read_csv(csv_fileName)
+        ret = self.write_dataframe(data,tags,fields,measurement,database)
+
+        return ret
+
+    def write_json(self,json,database=None):
+        '''
+        Take in json in the form of a list of dictionaries or a single dictionary
+        and upload to database. User must specify list of tags and a list of fields as well as the csv file name. Database is optional
+        by default the database specified by the client will be used
+        '''
+
+        #set default database
+        if (database == None):
+            database = self.database
+
+        #check to see if json is a list of dictionaries or a single dictionary
+        if isinstance(json, list):
+            ret = self.__post_to_DB(json,database)
+        else:
+            json = [json]
+            ret = self.__post_to_DB(json,database)
+
+        return ret
 
     def list_DB(self):
         '''

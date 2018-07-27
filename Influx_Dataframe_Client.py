@@ -192,11 +192,7 @@ class Influx_Dataframe_Client(object):
         the columns in the dataframe that are going to be included in the tags
         and fields dictionary
         '''
-<<<<<<< HEAD
-        #print(data.head())
-=======
-        # print(data.head())
->>>>>>> b5133311e593a80a4cc7fa2fc174519a356be1e4
+
         data['measurement'] = measurement
         data["tags"] = data.loc[:,tags].apply(transform_to_dict, tags=tags, axis=1)
         data["fields"] = data.loc[:,fields].apply(transform_to_dict, tags=fields, axis=1)

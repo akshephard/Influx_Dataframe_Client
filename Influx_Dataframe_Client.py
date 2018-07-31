@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from influxdb import InfluxDBClient
 from influxdb import DataFrameClient
+
 '''
 Two dataframe formats are accepted both are shown below:
                        time              ap_name  AP_count             parse_ap_name building_number floor room  test_field
@@ -441,7 +442,9 @@ class Influx_Dataframe_Client(object):
         if (group_string != ""):
             query_string = query_string + group_string
 
-        df = self.df_client.query(query_string, database=self.database,chunked=True, chunk_size=256)
+        print(query_string)
+
+        df = self.df_client.query(query_string, database=database,chunked=True, chunk_size=256)
 
         if (measurement in df):
             return df[measurement]

@@ -21,7 +21,7 @@ import ast
 
 
 from Influx_Dataframe_Client import Influx_Dataframe_Client
-
+#To run this script clone the repo and use the command: python3 demo.py conf.ini 
 
 
 ######################## MAIN ########################

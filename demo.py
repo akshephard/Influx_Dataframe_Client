@@ -21,7 +21,7 @@ import ast
 
 
 from Influx_Dataframe_Client import Influx_Dataframe_Client
-#To run this script clone the repo and use the command: python3 demo.py conf.ini 
+#To run this script clone the repo and use the command: python3 demo.py conf.ini
 
 
 ######################## MAIN ########################
@@ -37,7 +37,7 @@ def main():
 
     tags_list = ["ap_name","building_number","floor","room"]
     fields_list = ["AP_count","test_field"]
-    database='test_db'
+    database='pyTestDB'
     measurement='wifi_measurement'
 
     #make a single json dictionary in the format that InfluxDBClient expects
@@ -65,9 +65,11 @@ def main():
     test_client = Influx_Dataframe_Client(conf_file)
 
     #demo all ways to write data into database using client
+
     test_client.write_csv('example.csv',tags_list,fields_list,measurement,database)
     test_client.write_json(json,database)
     test_client.write_dataframe(data,tags_list,fields_list,measurement,database)
+
 
     fields_list = ['AP_count']
     tags_list = ['building_number','floor']

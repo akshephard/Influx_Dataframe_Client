@@ -1,0 +1,9 @@
+DB_config:
+    host: localhost
+    database: wifi_test
+    protocol: json
+    port: 8086
+    use_ssl: False
+    verify_ssl_is_on: False
+    username: Admin
+    password: password

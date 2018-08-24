@@ -1,8 +1,9 @@
-import configparser
+#import configparser
 import pandas as pd
 import numpy as np
 from influxdb import InfluxDBClient
 from influxdb import DataFrameClient
+import yaml
 
 '''
 Two dataframe formats are accepted both are shown below:
@@ -126,27 +127,29 @@ class Influx_Dataframe_Client(object):
     data = None
 
 
-    def __init__(self, config_file, db_section=None):
+    def __init__(self, config_file,db_section=None):
         '''
         Constructor reads credentials from config file and establishes a connection
         '''
-        # read from config file
-        Config = configparser.ConfigParser()
-        Config.read(config_file)
-        if db_section != None:
-            self.db_config = Config[db_section]
-        else:
-            self.db_config = Config["DB_config"]
+        #read from config file and establish connection to server
+        with open(config_file) as f:
+            # use safe_load instead load
+            influxConfig = yaml.safe_load(f)
 
-        self.host = self.db_config.get("host")
-        self.username = self.db_config.get("username")
-        self.password = self.db_config.get("password")
-        self.database = self.db_config.get("database")
-        self.protocol = self.db_config.get("protocol")
-        self.port = self.db_config.get("port")
-        self.use_ssl = self.db_config.getboolean("use_ssl")
-        self.verify_ssl_is_on = self.db_config.getboolean("verify_ssl_is_on")
+        if(db_section == None):
+            db_section = 'DB_config'
+
+
+        self.host = influxConfig[db_section]['host']
+        self.username = influxConfig[db_section]['username']
+        self.password = influxConfig[db_section]['password']
+        self.database = influxConfig[db_section]['database']
+        self.protocol = influxConfig[db_section]['protocol']
+        self.port = influxConfig[db_section]['port']
+        self.use_ssl = influxConfig[db_section]['use_ssl']
+        self.verify_ssl_is_on = influxConfig[db_section]['verify_ssl_is_on']
         self.__make_client()
+
 
 
     def __make_client(self):
@@ -442,7 +445,7 @@ class Influx_Dataframe_Client(object):
         if (group_string != ""):
             query_string = query_string + group_string
 
-        print(query_string)
+        #print(query_string)
 
         df = self.df_client.query(query_string, database=database,chunked=True, chunk_size=256)
 

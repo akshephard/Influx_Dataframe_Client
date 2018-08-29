@@ -9,7 +9,7 @@ The user must specify a config file in order to instantiate the object. An examp
 2 2016-04-01 07:00:00+00:00   ap135-100-139-r177       6.0   [ap135, 100, 139, r177]             100     1  139         1.0
 3 2016-04-01 07:00:00+00:00   ap135-100-140-r177       5.0   [ap135, 100, 140, r177]             100     1  140         1.0
 4 2016-04-01 07:00:00+00:00  ap135-100-149b-r177       1.0  [ap135, 100, 149b, r177]             100     1  49b         1.0
-`
+```
 [
   {
     'fields': {
@@ -81,4 +81,4 @@ The user must specify a config file in order to instantiate the object. An examp
     'measurement': 'wifi_data9'
     }
  ]
-`
+```

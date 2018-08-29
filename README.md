@@ -2,7 +2,10 @@
 This project seeks to make an easy way to write and query an influxDB server where the input and output for writes/queries are
 Pandas DataFrame
 
-The user must specify a yaml config file in order to instantiate the object. An example() is included in the repo.
+The user must specify a yaml config file in order to instantiate the object. An example(local_server.yaml) is included 
+in the repo. Modify this file to fit your needs. 
+
+A pandas dataframe that contains the following data:
 ```
                        time              ap_name  AP_count             parse_ap_name building_number floor room  test_field
 0 2016-04-01 07:00:00+00:00  ap135-100-103d-r177       1.0  [ap135, 100, 103d, r177]             100     1  03d         1.0
@@ -11,6 +14,10 @@ The user must specify a yaml config file in order to instantiate the object. An 
 3 2016-04-01 07:00:00+00:00   ap135-100-140-r177       5.0   [ap135, 100, 140, r177]             100     1  140         1.0
 4 2016-04-01 07:00:00+00:00  ap135-100-149b-r177       1.0  [ap135, 100, 149b, r177]             100     1  49b         1.0
 ```
+Will be converted to a list of JSON dictionaries which are formatted in the way that the `write_points()` function from the
+influxDB python client expects JSON data.
+
+
 ```
 [
   {

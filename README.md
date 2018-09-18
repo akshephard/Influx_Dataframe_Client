@@ -2,8 +2,9 @@
 This project seeks to make an easy way to write and query an influxDB server where the input and output for writes/queries are
 Pandas DataFrame
 
-The user must specify a yaml config file in order to instantiate the object. An example(local_server.yaml) is included 
-in the repo. Modify this file to fit your needs. 
+The user must specify a yaml config file in order to instantiate the object. An [example](https://github.com/akshephard/Influx_Dataframe_Client/blob/master/local_server.yaml) is included 
+in the repo. Modify this file to fit your needs. It contains the settins required for connecting to a remote database and
+query and write dataframes.
 
 A pandas dataframe that contains the following data:
 ```

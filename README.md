@@ -15,7 +15,17 @@ A pandas dataframe that contains the following data:
 3 2016-04-01 07:00:00+00:00   ap135-100-140-r177       5.0   [ap135, 100, 140, r177]             100     1  140         1.0
 4 2016-04-01 07:00:00+00:00  ap135-100-149b-r177       1.0  [ap135, 100, 149b, r177]             100     1  49b         1.0
 ```
-Will be converted to a list of JSON dictionaries which are formatted in the way that the `write_points()` function from the
+The same dataframe can also be given as where the index is the time:
+```
+                           AP_count              ap_name building_number floor room  test_field
+2016-04-01 07:00:00+00:00         1  ap135-100-103d-r177             100     1  03d           1
+2016-04-01 07:00:00+00:00         5   ap135-100-150-r177             100     1  150           1
+2016-04-01 07:00:00+00:00         3   ap135-100-121-r177             100     1  121           1
+2016-04-01 07:00:00+00:00         5   ap135-100-140-r177             100     1  140           1
+2016-04-01 07:00:00+00:00         1  ap135-100-149b-r177             100     1  49b           1
+```
+
+This wiill be converted to a list of JSON dictionaries which are formatted in the way that the `write_points()` function from the
 influxDB python client expects JSON data.
 
 

@@ -37,7 +37,7 @@ def main():
 
     tags_list = ["ap_name","building_number","floor","room"]
     fields_list = ["AP_count","test_field"]
-    database='pyTestDB'
+    database='local_btu'
     measurement='wifi_measurement'
 
     #make a single json dictionary in the format that InfluxDBClient expects
@@ -62,7 +62,7 @@ def main():
 
 
     # create client
-    test_client = Influx_Dataframe_Client(conf_file)
+    test_client = Influx_Dataframe_Client(conf_file,'local_db_config')
 
     #demo all ways to write data into database using client
 

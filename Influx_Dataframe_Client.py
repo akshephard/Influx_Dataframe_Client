@@ -445,7 +445,7 @@ class Influx_Dataframe_Client(object):
         if (group_string != ""):
             query_string = query_string + group_string
 
-        #print(query_string)
+        print(query_string)
 
         df = self.df_client.query(query_string, database=database,chunked=True, chunk_size=256)
 

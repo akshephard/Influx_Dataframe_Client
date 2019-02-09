@@ -75,10 +75,13 @@ def main():
     tags_list = ['building_number','floor']
     values_list = ['100','1']
 
+
     '''
     query below is equal to:
     SELECT *  FROM "wifi_measurement" WHERE time > '2016-03-01 06:00:00' AND time < '2016-04-02 08:00:00' AND "building_number" = '100' AND "floor" = '1'
+    since there is no fields specified the * is added into the query
     '''
+
     query_result = test_client.specific_query(database,measurement,start_time='2016-03-01 06:00:00', end_time='2016-04-02 08:00:00',tags=tags_list,values=values_list)
 
     #query below is equal to: Select * from MEASUREMENT_ARGUMENT using DATABASE_ARGUMENT
